@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#C00000">
+<title>히노아지 손익관리</title>
+<meta property="og:type" content="website">
+<meta property="og:title" content="히노아지 손익관리">
+<meta property="og:description" content="매출·원재료·인건비·고정비를 입력하면 손익이 자동 계산되는 매장 손익관리 앱">
+<meta property="og:image" content="og-hinoaji.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="히노아지 손익관리">
+<meta name="twitter:image" content="og-hinoaji.png">
+<style>
+  :root{
+    --red:#C00000;
+    --red-dark:#9A0000;
+    --bg:#FBF7F2;
+    --surface:#FFFFFF;
+    --surface2:#FBF6EE;
+    --text:#2B2B2B;
+    --muted:#8A8278;
+    --border:#EAE2D6;
+    --green:#1F7A4D;
+    --green-bg:#EAF6EF;
+    --coral:#C0392B;
+    --coral-bg:#FBEAE8;
+    --gold:#B8860B;
+    --radius:18px;
+    --shadow:0 2px 10px rgba(60,40,20,0.07);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",Roboto,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-size:17px;
+    line-height:1.5;
+    -webkit-text-size-adjust:100%;
+  }
+  #app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:40px;}
+
+  /* ── 상단바 ── */
+  .topbar{
+    position:sticky;top:0;z-index:20;
+    background:var(--red);
+    color:#fff;
+    padding:16px 18px;
+    display:flex;align-items:center;gap:10px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.12);
+  }
+  .topbar .back-btn{
+    background:rgba(255,255,255,0.18);
+    border:none;color:#fff;font-size:17px;font-weight:700;
+    padding:10px 14px;border-radius:12px;cursor:pointer;
+  }
+  .topbar h1{font-size:19px;font-weight:800;margin:0;flex:1;}
+  .home-header{padding:22px 20px 16px;}
+  .home-header .brand{font-size:14px;color:var(--red);font-weight:700;letter-spacing:0.5px;}
+  .home-header h1{font-size:26px;margin:4px 0 0;font-weight:800;color:var(--text);}
+  .store-name-input{
+    width:100%;border:none;background:transparent;font-family:inherit;
+    font-size:16px;font-weight:700;color:var(--muted);padding:8px 0 4px;
+    border-bottom:1.5px dashed var(--border);margin-top:6px;
+  }
+  .store-name-input:focus{outline:none;border-bottom-color:var(--red);color:var(--text);}
+  .store-name-input::placeholder{color:var(--muted);font-weight:600;}
+
+  /* ── 월 선택 ── */
+  .month-picker{
+    display:flex;align-items:center;justify-content:center;gap:18px;
+    margin:14px 20px 18px;
+  }
+  .month-picker button{
+    width:46px;height:46px;border-radius:50%;border:1px solid var(--border);
+    background:var(--surface);font-size:20px;font-weight:700;color:var(--red);
+    cursor:pointer;box-shadow:var(--shadow);
+  }
+  .month-picker .month-label{font-size:20px;font-weight:800;min-width:130px;text-align:center;}
+
+  /* ── 손익 요약 카드 ── */
+  .summary-card{
+    margin:0 20px 22px;
+    background:var(--surface);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:22px 20px;
+  }
+  .summary-row{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;}
+  .summary-row .lbl{color:var(--muted);font-size:15px;font-weight:600;}
+  .summary-row .val{font-size:18px;font-weight:700;}
+  .summary-divider{height:1px;background:var(--border);margin:8px 0;}
+  .profit-row{display:flex;justify-content:space-between;align-items:center;padding-top:6px;}
+  .profit-row .lbl{font-size:17px;font-weight:800;}
+  .profit-row .val{font-size:26px;font-weight:800;}
+  .val.pos{color:var(--green);}
+  .val.neg{color:var(--coral);}
+  .rate-chip{
+    display:inline-block;margin-top:6px;font-size:13px;font-weight:700;
+    padding:4px 10px;border-radius:20px;
+  }
+  .rate-chip.pos{background:var(--green-bg);color:var(--green);}
+  .rate-chip.neg{background:var(--coral-bg);color:var(--coral);}
+
+  /* ── 메뉴 카드 ── */
+  .menu-list{margin:0 20px;}
+  .menu-card{
+    display:flex;align-items:center;gap:14px;
+    background:var(--surface);border-radius:16px;box-shadow:var(--shadow);
+    padding:16px 16px;margin-bottom:12px;cursor:pointer;
+    border:1px solid transparent;
+  }
+  .menu-card:active{border-color:var(--red);}
+  .menu-card .icon{font-size:28px;width:44px;text-align:center;}
+  .menu-card .info{flex:1;}
+  .menu-card .info .t{font-size:16px;font-weight:700;}
+  .menu-card .info .v{font-size:14px;color:var(--muted);margin-top:2px;font-weight:600;}
+  .menu-card .chev{color:var(--muted);font-size:20px;}
+
+  /* ── 화면 전환 ── */
+  .screen{display:none;}
+  .screen.active{display:block;}
+  .content{padding:18px 20px 100px;}
+
+  /* ── 폼 요소 ── */
+  .field{margin-bottom:18px;}
+  .field label{display:block;font-size:14px;font-weight:700;color:var(--muted);margin-bottom:8px;}
+  .field input{
+    width:100%;padding:15px 14px;font-size:18px;border:1.5px solid var(--border);
+    border-radius:12px;background:var(--surface);color:var(--text);font-family:inherit;
+  }
+  .field input:focus{outline:none;border-color:var(--red);}
+  .hint{font-size:13px;color:var(--muted);margin-top:6px;}
+
+  /* ── 리스트(원재료/직원) 카드 ── */
+  .entry-card{
+    background:var(--surface);border-radius:16px;box-shadow:var(--shadow);
+    padding:16px;margin-bottom:14px;position:relative;
+  }
+  .entry-card .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .entry-card .field{margin-bottom:10px;}
+  .entry-card .field label{font-size:12px;margin-bottom:5px;}
+  .entry-card .field input{padding:12px;font-size:16px;}
+  .entry-line-total{
+    text-align:right;font-size:15px;font-weight:800;color:var(--red-dark);
+    margin-top:4px;
+  }
+  .del-btn{
+    position:absolute;top:14px;right:14px;
+    background:none;border:none;color:var(--muted);font-size:20px;
+    width:32px;height:32px;cursor:pointer;border-radius:8px;
+  }
+  .del-btn:active{background:var(--coral-bg);color:var(--coral);}
+
+  .add-btn{
+    width:100%;padding:16px;border:2px dashed var(--red);border-radius:14px;
+    background:transparent;color:var(--red);font-size:16px;font-weight:700;
+    cursor:pointer;margin-bottom:18px;
+  }
+
+  .empty-state{
+    text-align:center;color:var(--muted);font-size:15px;
+    padding:30px 10px;line-height:1.7;
+  }
+  .empty-state.sm{padding:16px 10px;font-size:14px;}
+
+  .section-label{font-size:14px;font-weight:800;color:var(--red-dark);margin:22px 0 10px;padding-left:2px;}
+  .section-label:first-child{margin-top:0;}
+  .add-btn.sub{padding:12px;font-size:14.5px;margin-bottom:14px;}
+
+  /* ── 업체(공급처) 카드 ── */
+  .supplier-card{
+    background:var(--surface2);border-radius:16px;box-shadow:var(--shadow);
+    margin-bottom:16px;border:1.5px solid var(--border);overflow:hidden;
+  }
+  .supplier-head{
+    display:flex;align-items:center;gap:10px;padding:14px 14px;
+    background:#FFF;border-bottom:1.5px solid var(--border);
+  }
+  .supplier-head input{
+    flex:1;min-width:0;border:none;background:transparent;font-size:17px;font-weight:800;
+    color:var(--text);padding:6px 4px;border-bottom:1.5px dashed var(--border);
+  }
+  .supplier-head input:focus{outline:none;border-color:var(--red);}
+  .supplier-toggle{
+    background:none;border:none;font-size:18px;color:var(--muted);cursor:pointer;
+    width:30px;height:30px;flex-shrink:0;
+  }
+  .supplier-total{font-size:14px;font-weight:800;color:var(--red-dark);white-space:nowrap;}
+  .supplier-del{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;width:30px;height:30px;flex-shrink:0;}
+  .supplier-del:active{color:var(--coral);}
+  .supplier-body{padding:14px;}
+
+  /* ── 탭 ── */
+  .tabbar{display:flex;gap:8px;margin-bottom:18px;}
+  .tabbar button{
+    flex:1;padding:13px;border-radius:12px;border:1.5px solid var(--border);
+    background:var(--surface);font-size:15px;font-weight:700;color:var(--muted);cursor:pointer;
+  }
+  .tabbar button.active{background:var(--red);border-color:var(--red);color:#fff;}
+
+  /* ── 하단 합계 바 ── */
+  .total-bar{
+    position:fixed;bottom:0;left:0;right:0;
+    max-width:480px;margin:0 auto;
+    background:var(--surface);
+    border-top:1px solid var(--border);
+    padding:14px 20px;
+    display:flex;justify-content:space-between;align-items:center;
+    box-shadow:0 -4px 14px rgba(0,0,0,0.06);
+    z-index:15;
+  }
+  .total-bar .t-lbl{font-size:14px;color:var(--muted);font-weight:700;}
+  .total-bar .t-val{font-size:20px;font-weight:800;color:var(--red-dark);}
+
+  .callout-btn{
+    width:100%;padding:14px;background:var(--green-bg);color:var(--green);
+    border:1.5px solid var(--green);border-radius:12px;font-size:15px;font-weight:700;
+    margin-bottom:18px;cursor:pointer;
+  }
+
+  /* ── 토스트 ── */
+  #toast{
+    position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(10px);
+    background:#2B2B2B;color:#fff;padding:11px 22px;border-radius:30px;
+    font-size:14px;font-weight:700;opacity:0;transition:opacity .25s,transform .25s;
+    pointer-events:none;z-index:50;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* ── 백업 모달 ── */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(0,0,0,0.5);
+    display:none;align-items:center;justify-content:center;
+    z-index:100;padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-box{
+    background:var(--surface);border-radius:18px;padding:22px;
+    max-width:420px;width:100%;max-height:85vh;overflow:auto;
+    box-shadow:0 8px 30px rgba(0,0,0,0.25);
+  }
+  .modal-box h2{font-size:18px;margin:0 0 12px;font-weight:800;}
+  .modal-box textarea{
+    width:100%;min-height:230px;padding:14px;font-size:14.5px;line-height:1.7;
+    border:1.5px solid var(--border);border-radius:12px;background:var(--surface2,#FBF6EE);
+    color:var(--text);resize:vertical;-webkit-user-select:text;user-select:text;
+  }
+  .modal-hint{font-size:13px;color:var(--muted);margin:12px 0;line-height:1.6;}
+  .modal-actions{display:flex;gap:10px;margin-top:8px;}
+  .modal-actions button{
+    flex:1;padding:14px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;border:none;
+  }
+  .modal-actions .copy-btn{background:var(--red);color:#fff;}
+  .modal-actions .close-btn{background:#FBF6EE;color:var(--text);border:1.5px solid var(--border);}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ══════ 홈 화면 ══════ -->
+  <section class="screen active" id="screen-home">
+    <div class="home-header">
+      <div class="brand">HINOAJI</div>
+      <h1>히노아지 손익관리</h1>
+      <input type="text" id="storeNameInput" class="store-name-input" placeholder="매장명을 입력하세요 (예: 광교점)" oninput="onStoreNameInput()">
+    </div>
+
+    <div class="month-picker">
+      <button onclick="changeMonth(-1)">‹</button>
+      <div class="month-label" id="monthLabel">2026년 6월</div>
+      <button onclick="changeMonth(1)">›</button>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-row"><span class="lbl">매출</span><span class="val" id="sumSales">0원</span></div>
+      <div class="summary-row"><span class="lbl">비용 합계</span><span class="val" id="sumCost">0원</span></div>
+      <div class="summary-divider"></div>
+      <div class="profit-row">
+        <span class="lbl">손익</span>
+        <span class="val" id="sumProfit">0원</span>
+      </div>
+      <div style="text-align:right;"><span class="rate-chip" id="sumRate">0.0%</span></div>
+    </div>
+
+    <div class="menu-list">
+      <div class="menu-card" onclick="openScreen('sales')">
+        <div class="icon">💰</div>
+        <div class="info"><div class="t">매출 입력</div><div class="v" id="menuSales">0원</div></div>
+        <div class="chev">›</div>
+      </div>
+      <div class="menu-card" onclick="openScreen('materials')">
+        <div class="icon">🥢</div>
+        <div class="info"><div class="t">원재료 구매</div><div class="v" id="menuMaterials">0원</div></div>
+        <div class="chev">›</div>
+      </div>
+      <div class="menu-card" onclick="openScreen('labor')">
+        <div class="icon">👥</div>
+        <div class="info"><div class="t">인건비 입력</div><div class="v" id="menuLabor">0원</div></div>
+        <div class="chev">›</div>
+      </div>
+      <div class="menu-card" onclick="openScreen('fixed')">
+        <div class="icon">🏠</div>
+        <div class="info"><div class="t">임대료 · 공과금 · 고정비</div><div class="v" id="menuFixed">0원</div></div>
+        <div class="chev">›</div>
+      </div>
+    </div>
+
+    <div style="margin:20px 20px 0;">
+      <button class="callout-btn" style="background:#FFF7E6;border-color:#D4A017;color:#8A6500;" onclick="shareBackup()">📤 이번 달 내용 카톡으로 보내기 (백업)</button>
+    </div>
+    <div class="hint" style="margin:0 20px 10px;text-align:center;">
+      이 화면은 이 휴대폰에만 저장돼요.<br>
+      사파리 공유 버튼 → <b>"홈 화면에 추가"</b> 해두고 그 아이콘으로 열어주세요.
+    </div>
+  </section>
+
+  <!-- ══════ 매출 화면 ══════ -->
+  <section class="screen" id="screen-sales">
+    <div class="topbar"><button class="back-btn" onclick="openScreen('home')">‹ 뒤로</button><h1>매출 입력</h1></div>
+    <div class="content">
+      <div class="field">
+        <label>이번 달 매출 (원)</label>
+        <input type="number" inputmode="decimal" id="inputSales" placeholder="예) 50000000" oninput="onSalesInput()">
+      </div>
+      <div class="hint">숫자만 입력하면 자동으로 저장돼요.</div>
+    </div>
+  </section>
+
+  <!-- ══════ 고정비 화면 ══════ -->
+  <section class="screen" id="screen-fixed">
+    <div class="topbar"><button class="back-btn" onclick="openScreen('home')">‹ 뒤로</button><h1>임대료 · 공과금 · 고정비</h1></div>
+    <div class="content">
+      <div class="section-label">임대료</div>
+      <div class="field">
+        <label>임대료 (원)</label>
+        <input type="number" inputmode="decimal" id="inputRent" oninput="onRentInput()">
+      </div>
+
+      <div class="section-label">공과금 항목</div>
+      <div class="hint" style="margin-bottom:14px;">예) 수도세, 전기세 등 — 항목을 자유롭게 추가하세요.</div>
+      <button class="add-btn sub" onclick="addUtility()">＋ 공과금 항목 추가</button>
+      <div id="utilitiesList"></div>
+
+      <div class="section-label">고정비 항목</div>
+      <div class="hint" style="margin-bottom:14px;">예) 정수기, 인터넷 등 — 항목을 자유롭게 추가하세요.</div>
+      <button class="add-btn sub" onclick="addFixedCost()">＋ 고정비 항목 추가</button>
+      <div id="fixedCostsList"></div>
+    </div>
+    <div class="total-bar"><span class="t-lbl">임대료·공과금·고정비 합계</span><span class="t-val" id="fixedTotal">0원</span></div>
+  </section>
+
+  <!-- ══════ 원재료 구매 화면(업체별) ══════ -->
+  <section class="screen" id="screen-materials">
+    <div class="topbar"><button class="back-btn" onclick="openScreen('home')">‹ 뒤로</button><h1>원재료 구매 (업체별)</h1></div>
+    <div class="content">
+      <button class="callout-btn" id="copySuppliersBtn" style="display:none;" onclick="copyPrevSuppliers()">📋 지난달 업체 목록 불러오기</button>
+      <button class="add-btn" onclick="addSupplier()">＋ 업체 추가</button>
+      <div id="suppliersList"></div>
+    </div>
+    <div class="total-bar"><span class="t-lbl">원재료비 합계</span><span class="t-val" id="materialsTotal">0원</span></div>
+  </section>
+
+  <!-- ══════ 인건비 화면 ══════ -->
+  <section class="screen" id="screen-labor">
+    <div class="topbar"><button class="back-btn" onclick="openScreen('home')">‹ 뒤로</button><h1>인건비 입력</h1></div>
+    <div class="content">
+      <div class="tabbar">
+        <button id="tabRegularBtn" class="active" onclick="switchLaborTab('regular')">정직원</button>
+        <button id="tabParttimeBtn" onclick="switchLaborTab('parttime')">아르바이트</button>
+      </div>
+
+      <div id="laborRegularPane">
+        <button class="callout-btn" id="copyPrevBtn" style="display:none;" onclick="copyPrevMonthStaff()">📋 지난달 직원 명단 불러오기</button>
+        <button class="add-btn" onclick="addRegular()">＋ 정직원 추가</button>
+        <div id="regularList"></div>
+      </div>
+
+      <div id="laborParttimePane" style="display:none;">
+        <button class="add-btn" onclick="addParttime()">＋ 아르바이트 추가</button>
+        <div id="parttimeList"></div>
+      </div>
+    </div>
+    <div class="total-bar"><span class="t-lbl">인건비 합계</span><span class="t-val" id="laborTotal">0원</span></div>
+  </section>
+
+</div>
+
+<div id="toast"></div>
+
+<div id="backupModal" class="modal-overlay" onclick="if(event.target===this) closeBackupModal()">
+  <div class="modal-box">
+    <h2>📤 이번 달 백업 내용</h2>
+    <textarea id="backupText" readonly></textarea>
+    <div class="modal-hint">"복사하기"를 누르면 자동 복사돼요. 카톡 채팅창에 가서 붙여넣기 하시면 됩니다.<br>(자동 복사가 안 되면 위 글자를 직접 길게 눌러 선택해서 복사해주세요.)</div>
+    <div class="modal-actions">
+      <button class="copy-btn" onclick="copyBackupText()">📋 복사하기</button>
+      <button class="close-btn" onclick="closeBackupModal()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<datalist id="productNameList"></datalist>
+<datalist id="utilityNameList"></datalist>
+<datalist id="fixedCostNameList"></datalist>
+
+<script>
+/* ══════════════════════ 데이터 모델 ══════════════════════ */
+let state = { month: currentMonthStr(), data: defaultData() };
+let productNames = [];
+let storeName = '';
+let saveTimer = null;
+
+function currentMonthStr(d){
+  d = d || new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function monthLabel(m){
+  const [y,mm] = m.split('-');
+  return y + '년 ' + parseInt(mm,10) + '월';
+}
+function shiftMonth(m, delta){
+  const [y,mm] = m.split('-').map(Number);
+  const d = new Date(y, mm-1+delta, 1);
+  return currentMonthStr(d);
+}
+/* 직전 달에 데이터가 없어도(한두 달 건너뛴 경우 포함) 최근 12개월 안에서
+   조건에 맞는 가장 최근 달을 찾아준다 */
+async function findRecentMonthWithData(predicate, maxBack){
+  maxBack = maxBack || 12;
+  let m = state.month;
+  for(let i=0; i<maxBack; i++){
+    m = shiftMonth(m, -1);
+    const d = await loadMonth(m);
+    if(predicate(d)) return { month: m, data: d };
+  }
+  return null;
+}
+let supplierUidSeq = 1;
+function defaultData(){
+  return {
+    sales:null,
+    suppliers:[],        // 원재료 구매 - 업체별 [{uid,name,collapsed,items:[{date,name,qty,price}]}]
+    regular:[],           // 정직원 [{name,base,incentive,insurance}]
+    parttime:[],          // 아르바이트 [{name,wage,hours,otWage,otHours}]
+    rent:null,             // 임대료 (고정)
+    utilities:[],          // 공과금 항목 [{name,amount}] - 예: 수도세, 전기세
+    fixedCosts:[]           // 고정비 항목 [{name,amount}] - 예: 정수기, 인터넷
+  };
+}
+/* 예전 버전 데이터(평평한 materials 배열, util1/util2 단일값)를
+   새 구조로 안전하게 변환 — 기존에 입력해둔 숫자가 사라지지 않도록 함 */
+function migrateData(d){
+  if(!Array.isArray(d.regular)) d.regular = [];
+  if(!Array.isArray(d.parttime)) d.parttime = [];
+
+  if(!Array.isArray(d.suppliers)){
+    if(Array.isArray(d.materials) && d.materials.length > 0){
+      d.suppliers = [{ uid:'legacy', name:'이전 구매내역', collapsed:false, items: d.materials }];
+    } else {
+      d.suppliers = [];
+    }
+  }
+  delete d.materials;
+
+  if(!Array.isArray(d.utilities)){
+    d.utilities = [];
+    if(d.util1){ d.utilities.push({name:'공과금', amount:d.util1}); }
+    if(d.util2){ d.utilities.push({name:'수도광열비', amount:d.util2}); }
+  }
+  delete d.util1; delete d.util2;
+
+  if(!Array.isArray(d.fixedCosts)) d.fixedCosts = [];
+
+  return d;
+}
+function won(n){ return Math.round(n||0).toLocaleString('ko-KR') + '원'; }
+function wonSigned(n){
+  n = Math.round(n||0);
+  const abs = Math.abs(n).toLocaleString('ko-KR');
+  return (n<0 ? '(' + abs + ')' : abs) + '원';
+}
+
+/* ── 계산 ── */
+function materialItemTotal(it){ return (Number(it.qty)||0)*(Number(it.price)||0); }
+function supplierTotal(s){ return s.items.reduce((sum,it)=>sum+materialItemTotal(it),0); }
+function materialsSum(data){ return data.suppliers.reduce((sum,s)=>sum+supplierTotal(s),0); }
+
+function regularLineTotal(e){ return (Number(e.base)||0)+(Number(e.incentive)||0)+(Number(e.insurance)||0); }
+function regularSum(data){ return data.regular.reduce((s,e)=>s+regularLineTotal(e),0); }
+function parttimeLineTotal(p){
+  return (Number(p.wage)||0)*(Number(p.hours)||0) + (Number(p.otWage)||0)*(Number(p.otHours)||0);
+}
+function parttimeSum(data){ return data.parttime.reduce((s,p)=>s+parttimeLineTotal(p),0); }
+function laborSum(data){ return regularSum(data)+parttimeSum(data); }
+
+function utilitiesSum(data){ return data.utilities.reduce((s,u)=>s+(Number(u.amount)||0),0); }
+function fixedCostsSum(data){ return data.fixedCosts.reduce((s,f)=>s+(Number(f.amount)||0),0); }
+function fixedSum(data){ return (Number(data.rent)||0) + utilitiesSum(data) + fixedCostsSum(data); }
+
+function totalCost(data){ return materialsSum(data)+laborSum(data)+fixedSum(data); }
+function profitOf(data){ return (Number(data.sales)||0) - totalCost(data); }
+
+/* ══════════════════════ 저장/로드 ══════════════════════ */
+/* 클로드 미리보기 안에서는 window.storage를, 외부 호스팅(tiiny.host 등)에서는
+   브라우저 localStorage를 자동으로 사용 — 어느 환경에서 열어도 저장이 되도록 처리 */
+const HAS_CLAUDE_STORAGE = (typeof window !== 'undefined' && window.storage && typeof window.storage.get === 'function');
+
+async function storageGet(key){
+  if(HAS_CLAUDE_STORAGE){
+    try{ const r = await window.storage.get(key); return r ? r.value : null; }
+    catch(e){ return null; }
+  }
+  try{ return localStorage.getItem(key); }catch(e){ return null; }
+}
+async function storageSet(key, value){
+  if(HAS_CLAUDE_STORAGE){
+    try{ await window.storage.set(key, value); return true; }catch(e){ return false; }
+  }
+  try{ localStorage.setItem(key, value); return true; }catch(e){ return false; }
+}
+
+async function loadMonth(month){
+  const raw = await storageGet('pnl:' + month);
+  try{ return raw ? migrateData(JSON.parse(raw)) : defaultData(); }catch(e){ return defaultData(); }
+}
+function queueSave(){
+  renderHome();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(doSave, 450);
+}
+async function doSave(){
+  const ok = await storageSet('pnl:' + state.month, JSON.stringify(state.data));
+  if(ok) showToast('저장됨 ✓');
+  else showToast('저장 실패 — 이 화면을 닫지 마세요');
+}
+async function loadProductNames(){
+  const raw = await storageGet('pnl:product-names');
+  try{ productNames = raw ? JSON.parse(raw) : []; }catch(e){ productNames = []; }
+  renderProductDatalist();
+}
+
+async function loadStoreName(){
+  const raw = await storageGet('pnl:store-name');
+  storeName = raw || '';
+  document.getElementById('storeNameInput').value = storeName;
+  applyStoreName();
+}
+function onStoreNameInput(){
+  storeName = document.getElementById('storeNameInput').value;
+  applyStoreName();
+  storageSet('pnl:store-name', storeName);
+}
+function applyStoreName(){
+  document.title = storeName ? `히노아지 ${storeName} 손익관리` : '히노아지 손익관리';
+}
+function storeLabel(){ return storeName ? `히노아지 ${storeName}` : '히노아지'; }
+function renderProductDatalist(){
+  const dl = document.getElementById('productNameList');
+  dl.innerHTML = productNames.map(n => '<option value="'+escapeHtml(n)+'">').join('');
+}
+async function rememberProductName(name){
+  name = (name||'').trim();
+  if(!name || productNames.includes(name)) return;
+  productNames.push(name);
+  renderProductDatalist();
+  await storageSet('pnl:product-names', JSON.stringify(productNames));
+}
+
+let utilityNames = ['수도세','전기세'];
+let fixedCostNames = ['정수기','인터넷'];
+async function loadUtilityNames(){
+  const raw = await storageGet('pnl:utility-names');
+  try{
+    const saved = raw ? JSON.parse(raw) : [];
+    saved.forEach(n => { if(!utilityNames.includes(n)) utilityNames.push(n); });
+  }catch(e){}
+  renderUtilityDatalist();
+}
+function renderUtilityDatalist(){
+  document.getElementById('utilityNameList').innerHTML = utilityNames.map(n => '<option value="'+escapeHtml(n)+'">').join('');
+}
+async function rememberUtilityName(name){
+  name = (name||'').trim();
+  if(!name || utilityNames.includes(name)) return;
+  utilityNames.push(name);
+  renderUtilityDatalist();
+  await storageSet('pnl:utility-names', JSON.stringify(utilityNames));
+}
+async function loadFixedCostNames(){
+  const raw = await storageGet('pnl:fixedcost-names');
+  try{
+    const saved = raw ? JSON.parse(raw) : [];
+    saved.forEach(n => { if(!fixedCostNames.includes(n)) fixedCostNames.push(n); });
+  }catch(e){}
+  renderFixedCostDatalist();
+}
+function renderFixedCostDatalist(){
+  document.getElementById('fixedCostNameList').innerHTML = fixedCostNames.map(n => '<option value="'+escapeHtml(n)+'">').join('');
+}
+async function rememberFixedCostName(name){
+  name = (name||'').trim();
+  if(!name || fixedCostNames.includes(name)) return;
+  fixedCostNames.push(name);
+  renderFixedCostDatalist();
+  await storageSet('pnl:fixedcost-names', JSON.stringify(fixedCostNames));
+}
+
+/* ══════════════════════ 백업(카톡으로 보내기) ══════════════════════ */
+function buildBackupText(){
+  const d = state.data;
+  const lines = [
+    `[${storeLabel()} ${monthLabel(state.month)} 손익]`,
+    `매출: ${won(d.sales)}`,
+    `원재료비: ${won(materialsSum(d))}`,
+    `인건비(정직원): ${won(regularSum(d))}`,
+    `인건비(아르바이트): ${won(parttimeSum(d))}`,
+    `임대료: ${won(d.rent)}`,
+    `공과금: ${won(utilitiesSum(d))}`,
+    `고정비: ${won(fixedCostsSum(d))}`,
+    `비용 합계: ${won(totalCost(d))}`,
+    `손익: ${wonSigned(profitOf(d))}`
+  ];
+  return lines.join('\n');
+}
+function shareBackup(){
+  const text = buildBackupText();
+  const ta = document.getElementById('backupText');
+  ta.value = text;
+  document.getElementById('backupModal').classList.add('show');
+  setTimeout(() => { ta.focus(); ta.select(); }, 80);
+}
+function closeBackupModal(){
+  document.getElementById('backupModal').classList.remove('show');
+}
+async function copyBackupText(){
+  const ta = document.getElementById('backupText');
+  const text = ta.value;
+  let ok = false;
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    try{ await navigator.clipboard.writeText(text); ok = true; }catch(e){}
+  }
+  if(!ok){
+    try{
+      ta.focus(); ta.select();
+      ok = document.execCommand('copy');
+    }catch(e){}
+  }
+  showToast(ok ? '복사됨! 카톡에 붙여넣기 하세요' : '자동 복사 실패 — 위 글자를 직접 선택해 복사해주세요');
+}
+
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ══════════════════════ 화면 전환 ══════════════════════ */
+function openScreen(name){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  window.scrollTo(0,0);
+  if(name === 'sales') fillSalesScreen();
+  if(name === 'fixed') fillFixedScreen();
+  if(name === 'materials'){ renderSuppliers(); checkCopySuppliersButton(); }
+  if(name === 'labor') { renderRegular(); renderParttime(); checkCopyPrevButton(); }
+  if(name === 'home') renderHome();
+}
+
+async function changeMonth(delta){
+  state.month = shiftMonth(state.month, delta);
+  state.data = await loadMonth(state.month);
+  renderHome();
+}
+
+/* ══════════════════════ 홈 렌더 ══════════════════════ */
+function renderHome(){
+  document.getElementById('monthLabel').textContent = monthLabel(state.month);
+  const d = state.data;
+  const cost = totalCost(d);
+  const profit = profitOf(d);
+  const sales = Number(d.sales)||0;
+  const rate = sales > 0 ? (profit/sales*100) : 0;
+
+  document.getElementById('sumSales').textContent = won(sales);
+  document.getElementById('sumCost').textContent = won(cost);
+  const profitEl = document.getElementById('sumProfit');
+  profitEl.textContent = wonSigned(profit);
+  profitEl.className = 'val ' + (profit >= 0 ? 'pos' : 'neg');
+  const rateEl = document.getElementById('sumRate');
+  rateEl.textContent = rate.toFixed(1) + '%';
+  rateEl.className = 'rate-chip ' + (profit >= 0 ? 'pos' : 'neg');
+
+  document.getElementById('menuSales').textContent = won(sales);
+  document.getElementById('menuMaterials').textContent = won(materialsSum(d));
+  document.getElementById('menuLabor').textContent = won(laborSum(d));
+  document.getElementById('menuFixed').textContent = won(fixedSum(d));
+}
+
+/* ══════════════════════ 매출 화면 ══════════════════════ */
+function fillSalesScreen(){
+  document.getElementById('inputSales').value = state.data.sales ?? '';
+}
+function onSalesInput(){
+  const v = document.getElementById('inputSales').value;
+  state.data.sales = v === '' ? null : Number(v);
+  queueSave();
+  renderHome();
+}
+
+/* ══════════════════════ 고정비 화면 (임대료/공과금/고정비) ══════════════════════ */
+function fillFixedScreen(){
+  document.getElementById('inputRent').value = state.data.rent ?? '';
+  renderUtilities();
+  renderFixedCosts();
+}
+function onRentInput(){
+  state.data.rent = numOrNull(document.getElementById('inputRent').value);
+  queueSave();
+  document.getElementById('fixedTotal').textContent = won(fixedSum(state.data));
+}
+function numOrNull(v){ return v === '' ? null : Number(v); }
+
+function addUtility(){
+  state.data.utilities.push({name:'', amount:null});
+  queueSave();
+  renderUtilities();
+}
+function removeUtility(i){
+  state.data.utilities.splice(i,1);
+  queueSave();
+  renderUtilities();
+}
+function renderUtilities(){
+  const list = state.data.utilities;
+  const box = document.getElementById('utilitiesList');
+  if(list.length === 0){
+    box.innerHTML = '<div class="empty-state sm">등록된 공과금 항목이 없어요. (수도세, 전기세 등)</div>';
+  } else {
+    box.innerHTML = list.map((u,i) => `
+      <div class="entry-card">
+        <button class="del-btn" onclick="removeUtility(${i})">✕</button>
+        <div class="field"><label>항목명</label>
+          <input type="text" list="utilityNameList" value="${escapeHtml(u.name||'')}" placeholder="예) 수도세"
+            oninput="updateUtility(${i},'name',this.value)" onblur="rememberUtilityName(this.value)">
+        </div>
+        <div class="field"><label>금액(원)</label>
+          <input type="number" inputmode="decimal" value="${u.amount ?? ''}" oninput="updateUtility(${i},'amount',this.value)">
+        </div>
+      </div>
+    `).join('');
+  }
+  document.getElementById('fixedTotal').textContent = won(fixedSum(state.data));
+}
+function updateUtility(i, key, value){
+  const u = state.data.utilities[i];
+  u[key] = key==='name' ? value : (value===''? null : Number(value));
+  document.getElementById('fixedTotal').textContent = won(fixedSum(state.data));
+  queueSave();
+}
+
+function addFixedCost(){
+  state.data.fixedCosts.push({name:'', amount:null});
+  queueSave();
+  renderFixedCosts();
+}
+function removeFixedCost(i){
+  state.data.fixedCosts.splice(i,1);
+  queueSave();
+  renderFixedCosts();
+}
+function renderFixedCosts(){
+  const list = state.data.fixedCosts;
+  const box = document.getElementById('fixedCostsList');
+  if(list.length === 0){
+    box.innerHTML = '<div class="empty-state sm">등록된 고정비 항목이 없어요. (정수기, 인터넷 등)</div>';
+  } else {
+    box.innerHTML = list.map((f,i) => `
+      <div class="entry-card">
+        <button class="del-btn" onclick="removeFixedCost(${i})">✕</button>
+        <div class="field"><label>항목명</label>
+          <input type="text" list="fixedCostNameList" value="${escapeHtml(f.name||'')}" placeholder="예) 정수기"
+            oninput="updateFixedCost(${i},'name',this.value)" onblur="rememberFixedCostName(this.value)">
+        </div>
+        <div class="field"><label>금액(원)</label>
+          <input type="number" inputmode="decimal" value="${f.amount ?? ''}" oninput="updateFixedCost(${i},'amount',this.value)">
+        </div>
+      </div>
+    `).join('');
+  }
+  document.getElementById('fixedTotal').textContent = won(fixedSum(state.data));
+}
+function updateFixedCost(i, key, value){
+  const f = state.data.fixedCosts[i];
+  f[key] = key==='name' ? value : (value===''? null : Number(value));
+  document.getElementById('fixedTotal').textContent = won(fixedSum(state.data));
+  queueSave();
+}
+
+/* ══════════════════════ 원재료(업체별) 화면 ══════════════════════ */
+function defaultItemDate(){
+  const today = currentMonthStr();
+  if(today === state.month){ return new Date().toISOString().slice(0,10); }
+  return state.month + '-01';
+}
+function addSupplier(){
+  state.data.suppliers.push({ uid: 's' + (supplierUidSeq++), name:'', collapsed:false, items:[] });
+  queueSave();
+  renderSuppliers();
+}
+function removeSupplier(idx){
+  if(!confirm('이 업체와 구매 내역을 모두 삭제할까요?')) return;
+  state.data.suppliers.splice(idx,1);
+  queueSave();
+  renderSuppliers();
+}
+function toggleSupplier(idx){
+  state.data.suppliers[idx].collapsed = !state.data.suppliers[idx].collapsed;
+  renderSuppliers();
+}
+function updateSupplierName(idx, value){
+  state.data.suppliers[idx].name = value;
+  queueSave();
+}
+function addMaterialItem(sIdx){
+  state.data.suppliers[sIdx].items.push({date:defaultItemDate(), name:'', qty:null, price:null});
+  queueSave();
+  renderSuppliers();
+}
+function removeMaterialItem(sIdx, iIdx){
+  state.data.suppliers[sIdx].items.splice(iIdx,1);
+  queueSave();
+  renderSuppliers();
+}
+function updateMaterialItem(sIdx, iIdx, key, value){
+  const it = state.data.suppliers[sIdx].items[iIdx];
+  it[key] = (key==='qty'||key==='price') ? (value===''? null : Number(value)) : value;
+  const lineEl = document.getElementById('matLine_'+sIdx+'_'+iIdx);
+  if(lineEl) lineEl.textContent = won(materialItemTotal(it));
+  refreshMaterialsTotals();
+  queueSave();
+}
+function refreshMaterialsTotals(){
+  state.data.suppliers.forEach((s,idx) => {
+    const el = document.getElementById('supplierTotal_'+idx);
+    if(el) el.textContent = won(supplierTotal(s));
+  });
+  document.getElementById('materialsTotal').textContent = won(materialsSum(state.data));
+}
+function renderSuppliers(){
+  const list = state.data.suppliers;
+  const box = document.getElementById('suppliersList');
+  if(list.length === 0){
+    box.innerHTML = '<div class="empty-state">등록된 업체가 없어요.<br>위의 + 버튼으로 업체를 먼저 추가하세요.</div>';
+  } else {
+    box.innerHTML = list.map((s,idx) => {
+      const itemsHtml = s.items.length === 0
+        ? '<div class="empty-state sm">구매 내역이 없어요.</div>'
+        : s.items.map((it,iIdx) => `
+            <div class="entry-card">
+              <button class="del-btn" onclick="removeMaterialItem(${idx},${iIdx})">✕</button>
+              <div class="field"><label>날짜</label>
+                <input type="date" value="${it.date||''}" onchange="updateMaterialItem(${idx},${iIdx},'date',this.value)">
+              </div>
+              <div class="field"><label>상품명</label>
+                <input type="text" list="productNameList" value="${escapeHtml(it.name||'')}" placeholder="예) 연어"
+                  oninput="updateMaterialItem(${idx},${iIdx},'name',this.value)" onblur="rememberProductName(this.value)">
+              </div>
+              <div class="grid2">
+                <div class="field"><label>구매수량</label>
+                  <input type="number" inputmode="decimal" value="${it.qty ?? ''}" oninput="updateMaterialItem(${idx},${iIdx},'qty',this.value)">
+                </div>
+                <div class="field"><label>구매금액(원)</label>
+                  <input type="number" inputmode="decimal" value="${it.price ?? ''}" oninput="updateMaterialItem(${idx},${iIdx},'price',this.value)">
+                </div>
+              </div>
+              <div class="entry-line-total" id="matLine_${idx}_${iIdx}">${won(materialItemTotal(it))}</div>
+            </div>
+          `).join('');
+      return `
+        <div class="supplier-card">
+          <div class="supplier-head">
+            <button class="supplier-toggle" onclick="toggleSupplier(${idx})">${s.collapsed ? '▸' : '▾'}</button>
+            <input type="text" value="${escapeHtml(s.name||'')}" placeholder="업체명을 입력하세요"
+              oninput="updateSupplierName(${idx}, this.value)">
+            <span class="supplier-total" id="supplierTotal_${idx}">${won(supplierTotal(s))}</span>
+            <button class="supplier-del" onclick="removeSupplier(${idx})">✕</button>
+          </div>
+          ${s.collapsed ? '' : `
+          <div class="supplier-body">
+            <button class="add-btn sub" onclick="addMaterialItem(${idx})">＋ 원재료 추가</button>
+            ${itemsHtml}
+          </div>`}
+        </div>
+      `;
+    }).join('');
+  }
+  document.getElementById('materialsTotal').textContent = won(materialsSum(state.data));
+}
+async function checkCopySuppliersButton(){
+  const btn = document.getElementById('copySuppliersBtn');
+  if(state.data.suppliers.length > 0){ btn.style.display='none'; return; }
+  const found = await findRecentMonthWithData(d => d.suppliers.length > 0);
+  if(found){ btn.style.display = ''; btn.dataset.prevMonth = found.month; }
+  else { btn.style.display = 'none'; }
+}
+async function copyPrevSuppliers(){
+  const prevMonth = document.getElementById('copySuppliersBtn').dataset.prevMonth;
+  const prev = await loadMonth(prevMonth);
+  state.data.suppliers = prev.suppliers.map(s => ({ uid:'s'+(supplierUidSeq++), name:s.name, collapsed:false, items:[] }));
+  queueSave();
+  renderSuppliers();
+  document.getElementById('copySuppliersBtn').style.display = 'none';
+  showToast('지난달 업체 목록을 불러왔어요 (구매내역은 새로 입력)');
+}
+
+/* ══════════════════════ 인건비 화면 ══════════════════════ */
+function switchLaborTab(tab){
+  const isReg = tab === 'regular';
+  document.getElementById('tabRegularBtn').classList.toggle('active', isReg);
+  document.getElementById('tabParttimeBtn').classList.toggle('active', !isReg);
+  document.getElementById('laborRegularPane').style.display = isReg ? '' : 'none';
+  document.getElementById('laborParttimePane').style.display = isReg ? 'none' : '';
+}
+
+function addRegular(){
+  state.data.regular.push({name:'', base:null, incentive:null, insurance:null});
+  queueSave();
+  renderRegular();
+}
+function removeRegular(i){
+  state.data.regular.splice(i,1);
+  queueSave();
+  renderRegular();
+}
+function renderRegular(){
+  const list = state.data.regular;
+  const box = document.getElementById('regularList');
+  if(list.length === 0){
+    box.innerHTML = '<div class="empty-state">등록된 정직원이 없어요.<br>+ 버튼으로 추가하거나, 지난달 명단을 불러와보세요.</div>';
+  } else {
+    box.innerHTML = list.map((e,i) => `
+      <div class="entry-card">
+        <button class="del-btn" onclick="removeRegular(${i})">✕</button>
+        <div class="field"><label>이름</label>
+          <input type="text" value="${escapeHtml(e.name||'')}" placeholder="이름" oninput="updateRegular(${i},'name',this.value)">
+        </div>
+        <div class="grid2">
+          <div class="field"><label>기본급(원)</label>
+            <input type="number" inputmode="decimal" value="${e.base ?? ''}" oninput="updateRegular(${i},'base',this.value)">
+          </div>
+          <div class="field"><label>인센티브(원)</label>
+            <input type="number" inputmode="decimal" value="${e.incentive ?? ''}" oninput="updateRegular(${i},'incentive',this.value)">
+          </div>
+        </div>
+        <div class="field"><label>4대보험(원)</label>
+          <input type="number" inputmode="decimal" value="${e.insurance ?? ''}" oninput="updateRegular(${i},'insurance',this.value)">
+        </div>
+        <div class="entry-line-total" id="regLine${i}">${won(regularLineTotal(e))}</div>
+      </div>
+    `).join('');
+  }
+  updateLaborTotalBar();
+}
+function updateRegular(i, key, value){
+  const e = state.data.regular[i];
+  e[key] = key==='name' ? value : (value===''? null : Number(value));
+  const lineEl = document.getElementById('regLine'+i);
+  if(lineEl) lineEl.textContent = won(regularLineTotal(e));
+  updateLaborTotalBar();
+  queueSave();
+}
+
+function addParttime(){
+  state.data.parttime.push({name:'', wage:null, hours:null, otWage:null, otHours:null});
+  queueSave();
+  renderParttime();
+}
+function removeParttime(i){
+  state.data.parttime.splice(i,1);
+  queueSave();
+  renderParttime();
+}
+function renderParttime(){
+  const list = state.data.parttime;
+  const box = document.getElementById('parttimeList');
+  if(list.length === 0){
+    box.innerHTML = '<div class="empty-state">등록된 아르바이트가 없어요.<br>+ 버튼을 눌러 추가해보세요.</div>';
+  } else {
+    box.innerHTML = list.map((p,i) => `
+      <div class="entry-card">
+        <button class="del-btn" onclick="removeParttime(${i})">✕</button>
+        <div class="field"><label>이름</label>
+          <input type="text" value="${escapeHtml(p.name||'')}" placeholder="이름" oninput="updateParttime(${i},'name',this.value)">
+        </div>
+        <div class="grid2">
+          <div class="field"><label>시급(원)</label>
+            <input type="number" inputmode="decimal" value="${p.wage ?? ''}" oninput="updateParttime(${i},'wage',this.value)">
+          </div>
+          <div class="field"><label>근무시간</label>
+            <input type="number" inputmode="decimal" value="${p.hours ?? ''}" oninput="updateParttime(${i},'hours',this.value)">
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>연장수당(시급)</label>
+            <input type="number" inputmode="decimal" value="${p.otWage ?? ''}" oninput="updateParttime(${i},'otWage',this.value)">
+          </div>
+          <div class="field"><label>연장근무시간</label>
+            <input type="number" inputmode="decimal" value="${p.otHours ?? ''}" oninput="updateParttime(${i},'otHours',this.value)">
+          </div>
+        </div>
+        <div class="entry-line-total" id="ptLine${i}">${won(parttimeLineTotal(p))}</div>
+      </div>
+    `).join('');
+  }
+  updateLaborTotalBar();
+}
+function updateParttime(i, key, value){
+  const p = state.data.parttime[i];
+  p[key] = key==='name' ? value : (value===''? null : Number(value));
+  const lineEl = document.getElementById('ptLine'+i);
+  if(lineEl) lineEl.textContent = won(parttimeLineTotal(p));
+  updateLaborTotalBar();
+  queueSave();
+}
+function updateLaborTotalBar(){
+  document.getElementById('laborTotal').textContent = won(laborSum(state.data));
+}
+
+async function checkCopyPrevButton(){
+  const btn = document.getElementById('copyPrevBtn');
+  const hasNone = state.data.regular.length===0 && state.data.parttime.length===0;
+  if(!hasNone){ btn.style.display='none'; return; }
+  const found = await findRecentMonthWithData(d => d.regular.length>0 || d.parttime.length>0);
+  if(found){ btn.style.display = ''; btn.dataset.prevMonth = found.month; }
+  else { btn.style.display = 'none'; }
+}
+async function copyPrevMonthStaff(){
+  const prevMonth = document.getElementById('copyPrevBtn').dataset.prevMonth;
+  const prev = await loadMonth(prevMonth);
+  state.data.regular = prev.regular.map(e => ({...e}));
+  state.data.parttime = prev.parttime.map(p => ({...p}));
+  queueSave();
+  renderRegular();
+  renderParttime();
+  document.getElementById('copyPrevBtn').style.display = 'none';
+  showToast('지난달 명단을 불러왔어요');
+}
+
+/* ══════════════════════ 토스트 ══════════════════════ */
+let toastTimer = null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1400);
+}
+
+/* ══════════════════════ 초기화 ══════════════════════ */
+(async function init(){
+  await loadStoreName();
+  await loadProductNames();
+  await loadUtilityNames();
+  await loadFixedCostNames();
+  state.data = await loadMonth(state.month);
+  renderHome();
+})();
+</script>
+</body>
+</html>
