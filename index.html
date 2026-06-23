@@ -42,7 +42,33 @@
     line-height:1.5;
     -webkit-text-size-adjust:100%;
   }
-  #app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:40px;}
+  #app{max-width:480px;margin:0 auto;min-height:100vh;background:var(--bg);position:relative;padding-bottom:40px;display:none;}
+
+  /* ── 비밀번호 잠금화면 ── */
+  .lock-overlay{
+    position:fixed;inset:0;background:var(--bg);
+    display:flex;align-items:center;justify-content:center;
+    z-index:200;padding:24px;
+  }
+  .lock-overlay.hidden{display:none;}
+  .lock-box{
+    background:var(--surface);border-radius:20px;padding:34px 26px;
+    max-width:340px;width:100%;text-align:center;box-shadow:var(--shadow);
+  }
+  .lock-box .brand{font-size:14px;color:var(--red);font-weight:700;letter-spacing:0.5px;margin-bottom:6px;}
+  .lock-box h1{font-size:22px;font-weight:800;margin:0 0 6px;color:var(--text);}
+  .lock-desc{font-size:14px;color:var(--muted);margin:0 0 22px;}
+  .lock-box input{
+    width:100%;padding:16px 14px;font-size:20px;border:1.5px solid var(--border);
+    border-radius:12px;text-align:center;margin-bottom:12px;letter-spacing:3px;
+    font-family:inherit;
+  }
+  .lock-box input:focus{outline:none;border-color:var(--red);}
+  .lock-error{color:var(--coral);font-size:13px;margin:-2px 0 14px;font-weight:700;display:none;}
+  .lock-submit{
+    width:100%;padding:16px;background:var(--red);color:#fff;border:none;
+    border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;
+  }
 
   /* ── 상단바 ── */
   .topbar{
@@ -389,6 +415,18 @@
     <div class="total-bar"><span class="t-lbl">인건비 합계</span><span class="t-val" id="laborTotal">0원</span></div>
   </section>
 
+</div>
+
+<div id="lockScreen" class="lock-overlay">
+  <div class="lock-box">
+    <div class="brand">HINOAJI</div>
+    <h1>히노아지 손익관리</h1>
+    <p class="lock-desc">매장 비밀번호를 입력해주세요</p>
+    <input type="password" id="lockPasswordInput" inputmode="text" autocomplete="off"
+      placeholder="비밀번호" onkeydown="if(event.key==='Enter') trySubmitPassword();">
+    <div id="lockError" class="lock-error">비밀번호가 올바르지 않습니다</div>
+    <button class="lock-submit" onclick="trySubmitPassword()">확인</button>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -1061,14 +1099,55 @@ function showToast(msg){
   toastTimer = setTimeout(() => t.classList.remove('show'), 1400);
 }
 
+/* ══════════════════════ 비밀번호 잠금 ══════════════════════ */
+/* 비밀번호를 바꾸려면 아래 값만 수정하면 됩니다 */
+const SITE_PASSWORD = 'hinoaji9568';
+const UNLOCK_KEY = 'pnl:unlocked';
+
+async function isUnlocked(){
+  const flag = await storageGet(UNLOCK_KEY);
+  return flag === 'yes';
+}
+function showLockScreen(){
+  document.getElementById('lockScreen').classList.remove('hidden');
+  document.getElementById('app').style.display = 'none';
+  setTimeout(() => { document.getElementById('lockPasswordInput').focus(); }, 80);
+}
+function showApp(){
+  document.getElementById('lockScreen').classList.add('hidden');
+  document.getElementById('app').style.display = 'block';
+}
+async function trySubmitPassword(){
+  const input = document.getElementById('lockPasswordInput');
+  const errorEl = document.getElementById('lockError');
+  if(input.value === SITE_PASSWORD){
+    errorEl.style.display = 'none';
+    await storageSet(UNLOCK_KEY, 'yes');
+    showApp();
+    await startApp();
+  } else {
+    errorEl.style.display = 'block';
+    input.value = '';
+    input.focus();
+  }
+}
+
 /* ══════════════════════ 초기화 ══════════════════════ */
-(async function init(){
+async function startApp(){
   await loadStoreName();
   await loadProductNames();
   await loadUtilityNames();
   await loadFixedCostNames();
   state.data = await loadMonth(state.month);
   renderHome();
+}
+(async function boot(){
+  if(await isUnlocked()){
+    showApp();
+    await startApp();
+  } else {
+    showLockScreen();
+  }
 })();
 </script>
 </body>
